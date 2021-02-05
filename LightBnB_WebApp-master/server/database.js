@@ -1,8 +1,17 @@
 const properties = require('./json/properties.json');
 const users = require('./json/users.json');
 
-/// Users
+const { Pool } = require('pg');
 
+const pool = new Pool({
+  user: 'vagrant',
+  password: '123',
+  host: 'localhost',
+  database: 'lightbnb'
+});
+
+
+/// Users
 /**
  * Get a single user from the database given their email.
  * @param {String} email The email of the user.
@@ -32,7 +41,6 @@ const getUserWithId = function(id) {
 }
 exports.getUserWithId = getUserWithId;
 
-
 /**
  * Add a new user to the database.
  * @param {{name: string, password: string, email: string}} user
@@ -59,23 +67,27 @@ const getAllReservations = function(guest_id, limit = 10) {
 exports.getAllReservations = getAllReservations;
 
 /// Properties
-
 /**
  * Get all properties.
  * @param {{}} options An object containing query options.
  * @param {*} limit The number of results to return.
  * @return {Promise<[{}]>}  A promise to the properties.
  */
+
 const getAllProperties = function(options, limit = 10) {
-  const limitedProperties = {};
-  for (let i = 1; i <= limit; i++) {
-    limitedProperties[i] = properties[i];
-  }
-  return Promise.resolve(limitedProperties);
+  const queryParams = [];
+  let queryString = `
+    SELECT properties.*, avg(property_reviews.rating) as average_rating
+    FROM properties
+    JOIN property_reviews ON properties.id = property_id 
+    GROUP BY properties.id
+    ;`
+
+  return pool.query(queryString,queryParams)
+  .then(res => {return res.rows})
+
 }
 exports.getAllProperties = getAllProperties;
-
-
 /**
  * Add a property to the database
  * @param {{}} property An object containing all of the property details.
